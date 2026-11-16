@@ -1,40 +1,31 @@
 from pico2d import clear_canvas, get_events, update_canvas
-from sdl2 import SDL_KEYDOWN, SDL_QUIT, SDLK_ESCAPE, SDLK_F1
+from sdl2 import SDL_KEYDOWN, SDL_QUIT, SDLK_ESCAPE, SDLK_F1, SDLK_r
 
 import game_framework
 import game_world
+from ghost import Ghost
 from objects import Exit
 from player import Player
 from stage import Stage
 
-STAGE_PATH = 'stages/test.json'
-CLEAR_FRAMES = 60   # 출구에 닿고 1초 뒤 스테이지를 다시 시작한다
+ROUND_FRAMES = 600     # 한 회차 10초
+CLEAR_FRAMES = 60      # 출구에 닿고 1초 뒤 처음부터 다시 한다
 
-stage = None
-player = None
-exit_hatch = None
-clock = 0           # 프레임 시계. 2주차에 10초(600프레임) 회차로 쓴다
-cleared_at = None
+stage_path = 'stages/test.json'
 
 
 def init():
-    global stage, player, exit_hatch
-    stage = Stage(STAGE_PATH)
-    game_world.add_object(stage, 0)
+    global stage, player, exit_hatch, ghosts
+    stage = Stage(stage_path)
+    game_world.add_object(stage, game_world.STAGE)
     i, j = stage.exit
     exit_hatch = Exit(stage.left(i), stage.bottom(j))
-    game_world.add_object(exit_hatch, 1)
+    game_world.add_object(exit_hatch, game_world.OBJECT)
+
     player = Player(stage)
-    game_world.add_object(player, 2)
-    reset()
-
-
-def reset():
-    global clock, cleared_at
-    clock = 0
-    cleared_at = None
-    exit_hatch.lit = False
-    player.respawn()
+    game_world.add_object(player, game_world.PLAYER)
+    ghosts = []
+    start_round()
 
 
 def finish():
@@ -49,33 +40,81 @@ def resume():
     pass
 
 
+def start_round():
+    """시계를 0으로 돌리고 모든 유령을 0초부터 다시 재생한다"""
+    global clock, cleared_t
+    clock = 0
+    cleared_t = None
+    player.respawn()
+    for o in ghosts:
+        o.reset()
+    exit_hatch.lit = False
+
+
+def restart_stage():
+    for g in ghosts:
+        game_world.remove_object(g)
+    ghosts.clear()
+    start_round()
+
+
+def rewind():
+    """이번 회차의 기록을 유령으로 남기고 새 회차를 시작한다"""
+    g = Ghost(player.record, len(ghosts) + 1)
+    ghosts.append(g)
+    game_world.add_object(g, game_world.GHOST)
+    start_round()
+
+
 def handle_events():
     for event in get_events():
         if event.type == SDL_QUIT:
             game_framework.quit()
-        elif event.type == SDL_KEYDOWN and event.key == SDLK_ESCAPE:
-            reset()
-        elif event.type == SDL_KEYDOWN and event.key == SDLK_F1:
-            game_world.show_bb = not game_world.show_bb
-        else:
-            player.handle_event(event)
+            continue
+        if event.type == SDL_KEYDOWN:
+            if event.key == SDLK_F1:
+                game_world.show_bb = not game_world.show_bb
+                continue
+            if cleared_t is None:
+                if event.key == SDLK_ESCAPE:
+                    restart_stage()
+                    continue
+                if event.key == SDLK_r:
+                    rewind()
+                    continue
+        player.handle_event(event)
 
 
 def update():
-    global clock, cleared_at
-    clock += 1
-    if cleared_at is not None:
-        if clock - cleared_at >= CLEAR_FRAMES:
-            reset()
+    global cleared_t
+    if cleared_t is not None:
+        cleared_t += 1
+        if cleared_t >= CLEAR_FRAMES:
+            restart_stage()
+        return
+    play_step()
+
+
+def play_step():
+    """한 프레임. 순서가 언제나 같아야 유령이 같은 결과를 낸다"""
+    global clock, cleared_t
+    for g in ghosts:
+        g.step(clock)
+    player.update()
+    player.save_frame()
+
+    if player.y + player.H < 0:
+        start_round()   # 구덩이에 빠지면 이번 회차를 다시 한다
+        return
+    if game_world.collide(player, exit_hatch):
+        exit_hatch.lit = True
+        cleared_t = 0
+        print(f'{stage.name} 클리어: 유령 {len(ghosts)}명')
         return
 
-    game_world.update()
-    if player.y + player.H < 0:
-        player.respawn()   # 구덩이에 빠지면 시작 위치로
-    elif game_world.collide(player, exit_hatch):
-        exit_hatch.lit = True
-        cleared_at = clock
-        print(f'{stage.name} 클리어: {clock / game_framework.FPS:.2f}초')
+    clock += 1
+    if clock >= ROUND_FRAMES:
+        rewind()
 
 
 def draw():
