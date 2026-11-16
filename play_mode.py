@@ -5,7 +5,7 @@ import game_framework
 import game_world
 import ui
 from ghost import Ghost
-from objects import Exit
+from objects import Door, Exit, Pedal
 from player import Player
 from stage import Stage
 
@@ -17,12 +17,25 @@ stage_path = 'stages/test.json'
 
 
 def init():
-    global stage, player, exit_hatch, ghosts, message, message_t
+    global stage, player, exit_hatch, pedals, doors, ghosts, message, message_t
     stage = Stage(stage_path)
     game_world.add_object(stage, game_world.STAGE)
+
+    by_id = {}
+    pedals = []
+    for p in stage.pedals:
+        i, j = p['at']
+        pedal = Pedal(p['color'], stage.left(i), stage.bottom(j))
+        by_id[p['id']] = pedal
+        pedals.append(pedal)
+    doors = []
+    for d in stage.doors:
+        i, j = d['at']
+        doors.append(Door(d['kind'], stage.left(i), stage.bottom(j), [by_id[k] for k in d['pedals']]))
     i, j = stage.exit
     exit_hatch = Exit(stage.left(i), stage.bottom(j))
-    game_world.add_object(exit_hatch, game_world.OBJECT)
+    for o in doors + pedals + [exit_hatch]:
+        game_world.add_object(o, game_world.OBJECT)
 
     player = Player(stage)
     game_world.add_object(player, game_world.PLAYER)
@@ -44,12 +57,12 @@ def resume():
 
 
 def start_round():
-    """시계를 0으로 돌리고 모든 유령을 0초부터 다시 재생한다"""
+    """시계와 문, 발판을 처음 상태로 돌리고 모든 유령을 0초부터 다시 재생한다"""
     global clock, cleared_t
     clock = 0
     cleared_t = None
     player.respawn()
-    for o in ghosts:
+    for o in pedals + doors + ghosts:
         o.reset()
     exit_hatch.lit = False
 
@@ -124,7 +137,15 @@ def play_step():
     global clock, cleared_t
     for g in ghosts:
         g.step(clock)
-    player.step([], ghosts)
+    blocks = [d.get_bb() for d in doors if d.is_closed()]
+    player.step(blocks, ghosts)
+    bodies = [player] + ghosts
+    for p in pedals:
+        p.step(bodies)
+    for d in doors:
+        d.step(clock)
+        if d.is_closed():
+            player.push_out(*d.get_bb())
     player.save_frame()
 
     if player.y + player.H < 0:
