@@ -124,7 +124,7 @@ def play_step():
     global clock, cleared_t
     for g in ghosts:
         g.step(clock)
-    player.update()
+    player.step([], ghosts)
     player.save_frame()
 
     if player.y + player.H < 0:
