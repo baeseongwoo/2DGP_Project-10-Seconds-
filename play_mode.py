@@ -7,7 +7,7 @@ import game_framework
 import game_world
 import ui
 from ghost import Ghost
-from objects import Door, Exit, Pedal
+from objects import Door, Exit, Mover, Pedal
 from player import Player
 from stage import Stage
 
@@ -19,7 +19,7 @@ stage_path = 'stages/stage01.json'
 
 
 def init():
-    global stage, player, exit_hatch, pedals, doors, ghosts, collapses, message, message_t
+    global stage, player, exit_hatch, pedals, doors, movers, ghosts, collapses, message, message_t
     stage = Stage(stage_path)
     game_world.add_object(stage, game_world.STAGE)
 
@@ -34,9 +34,10 @@ def init():
     for d in stage.doors:
         i, j = d['at']
         doors.append(Door(d['kind'], stage.left(i), stage.bottom(j), [by_id[k] for k in d['pedals']]))
+    movers = [Mover(stage, m['path'], m['period'], m.get('hold', 60)) for m in stage.movers]
     i, j = stage.exit
     exit_hatch = Exit(stage.left(i), stage.bottom(j))
-    for o in doors + pedals + [exit_hatch]:
+    for o in doors + pedals + movers + [exit_hatch]:
         game_world.add_object(o, game_world.OBJECT)
 
     player = Player(stage)
@@ -65,7 +66,7 @@ def start_round():
     clock = 0
     cleared_t = None
     player.respawn()
-    for o in pedals + doors + ghosts:
+    for o in pedals + doors + movers + ghosts:
         o.reset()
     exit_hatch.lit = False
 
@@ -161,10 +162,12 @@ def update():
 def play_step():
     """한 프레임. 순서가 언제나 같아야 유령이 같은 결과를 낸다"""
     global clock, cleared_t
+    for m in movers:
+        m.step(clock)
     for g in ghosts:
         g.step(clock)
     blocks = [d.get_bb() for d in doors if d.is_closed()]
-    player.step(blocks, ghosts)
+    player.step(blocks, movers + ghosts)
     bodies = [player] + ghosts
     for p in pedals:
         p.step(bodies)

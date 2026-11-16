@@ -119,3 +119,59 @@ class Door:
                    self.cx - 20 + 40 * left + ox, self.bottom + self.H + 8 + oy, ui.ORANGE)
         if game_world.show_bb and self.is_closed():
             draw_rectangle(*self.get_bb())
+
+
+class Mover:
+    """두 지점 사이를 시계에 맞춰 왕복한다. 위에서만 밟히고, 올라탄 몸을 함께 옮긴다"""
+    W, H = 96, 24
+
+    def __init__(self, stage, path, period, hold=60):
+        (i0, j0), (i1, j1) = path
+        # j는 발판 윗면이 맞닿을 칸 줄: 그 칸의 윗변이 발판 윗면이 된다
+        self.a = (stage.left(i0), stage.bottom(j0) + TILE)
+        self.b = (stage.left(i1), stage.bottom(j1) + TILE)
+        self.period = period
+        self.hold = hold                          # 양 끝에서 멈춰 있는 프레임. 이때 타고 내린다
+        self.travel = (period - 2 * hold) / 2     # 한쪽으로 가는 데 걸리는 프레임
+        self.image = assets.image('mover.png')
+        self.reset()
+
+    def reset(self):
+        self.step(0)
+        self.px, self.ptop = self.x, self.top
+
+    def position(self, clock):
+        t, hold, travel = clock % self.period, self.hold, self.travel
+        if t < hold:                            # 출발점에서 멈춤
+            s = 0.0
+        elif t < hold + travel:                 # 가는 길
+            s = (t - hold) / travel
+        elif t < 2 * hold + travel:             # 끝점에서 멈춤
+            s = 1.0
+        else:                                   # 돌아오는 길
+            s = 1 - (t - 2 * hold - travel) / travel
+        s = s * s * (3 - 2 * s)                 # 출발과 도착을 부드럽게
+        return (self.a[0] + (self.b[0] - self.a[0]) * s,
+                self.a[1] + (self.b[1] - self.a[1]) * s)
+
+    def step(self, clock):
+        if hasattr(self, 'x'):
+            self.px, self.ptop = self.x, self.top
+        self.x, self.top = self.position(clock)
+        self.flame = (clock // 6) % 2
+
+    def delta(self):
+        return self.x - self.px, self.top - self.ptop
+
+    def get_top(self):
+        return self.x + 2, self.top, self.x + self.W - 2
+
+    def update(self):
+        pass
+
+    def draw(self):
+        self.image.clip_draw(self.flame * self.W, 0, self.W, self.H,
+                             self.x + self.W / 2 + game_world.ox, self.top - self.H / 2 + game_world.oy)
+        if game_world.show_bb:
+            l, t, r = self.get_top()
+            draw_rectangle(l, t - 4, r, t)
