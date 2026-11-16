@@ -19,7 +19,7 @@ stage_path = 'stages/stage01.json'
 
 
 def init():
-    global stage, player, exit_hatch, pedals, doors, ghosts, message, message_t
+    global stage, player, exit_hatch, pedals, doors, ghosts, collapses, message, message_t
     stage = Stage(stage_path)
     game_world.add_object(stage, game_world.STAGE)
 
@@ -42,6 +42,7 @@ def init():
     player = Player(stage)
     game_world.add_object(player, game_world.PLAYER)
     ghosts = []
+    collapses = 0
     message, message_t = '', 0
     start_round()
 
@@ -75,9 +76,11 @@ def show(text):
 
 
 def restart_stage():
+    global collapses
     for g in ghosts:
         game_world.remove_object(g)
     ghosts.clear()
+    collapses = 0
     show('처음부터 다시 한다')
     start_round()
 
@@ -109,6 +112,14 @@ def switch_stage(number):
         finish()
         stage_path = path
         init()
+
+
+def time_collapse(ghost):
+    """유령이 지나야 할 문이 닫혀 과거와 현재가 어긋났다. 이번 회차를 0초부터 다시 한다"""
+    global collapses
+    collapses += 1
+    show(f'시간 붕괴! {ghost.number}번 유령이 닫힌 문에 막혔다')
+    start_round()
 
 
 def handle_events():
@@ -163,6 +174,11 @@ def play_step():
             player.push_out(*d.get_bb())
     player.save_frame()
 
+    for g in ghosts:
+        for d in doors:
+            if d.is_closed() and game_world.collide(g, d):
+                time_collapse(g)
+                return
     if player.y + player.H < 0:
         show('떨어졌다. 이번 회차를 다시 한다')
         start_round()
