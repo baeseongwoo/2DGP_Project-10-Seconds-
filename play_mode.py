@@ -165,8 +165,22 @@ def play_step():
 def draw():
     clear_canvas()
     game_world.render()
+    draw_hud()
+    update_canvas()
+
+
+def draw_hud():
+    remaining = (ROUND_FRAMES - clock) / game_framework.FPS
+    ui.text(f'{stage.number}. {stage.name}', 24, 694, 20)
+    ui.text(f'{remaining:.1f}', 640, 690, 40, ui.ORANGE if remaining <= 3 else ui.WHITE, align='center')
+    ui.box(540, 662, 740, 665, (40, 50, 64))
+    ui.box(540, 662, 540 + 200 * remaining / 10, 665, ui.ORANGE if remaining <= 3 else ui.CYAN)
+    ui.text(f'{len(ghosts) + 1}회차', 640, 648, 15, ui.GREY, align='center')
+    ui.text(f'유령 {len(ghosts)} / {stage.max_ghosts}', 1256, 694, 20, ui.CYAN, align='right')
+    ui.text(f'권장 {stage.recommended}명', 1256, 670, 14, ui.GREY, align='right')
+    ui.text('← → 이동    Space 점프    R 되감기    Z 유령 삭제    Esc 처음부터    F1 충돌 상자',
+            24, 16, 14, ui.GREY)
     if message_t:
         w = ui.text_width(message, 22)
         ui.box(640 - w / 2 - 18, 586, 640 + w / 2 + 18, 622, ui.INK, 200)
         ui.text(message, 640, 604, 22, ui.WHITE, align='center')
-    update_canvas()
