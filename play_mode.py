@@ -13,7 +13,7 @@ ROUND_FRAMES = 600     # 한 회차 10초
 CLEAR_FRAMES = 60      # 출구에 닿고 1초 뒤 처음부터 다시 한다
 MESSAGE_FRAMES = 150
 
-stage_path = 'stages/test.json'
+stage_path = 'stages/stage01.json'
 
 
 def init():
@@ -149,7 +149,8 @@ def play_step():
     player.save_frame()
 
     if player.y + player.H < 0:
-        start_round()   # 구덩이에 빠지면 이번 회차를 다시 한다
+        show('떨어졌다. 이번 회차를 다시 한다')
+        start_round()
         return
     if game_world.collide(player, exit_hatch):
         exit_hatch.lit = True
