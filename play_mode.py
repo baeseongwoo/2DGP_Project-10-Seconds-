@@ -1,8 +1,6 @@
-import os
 import random
 
-from pico2d import clear_canvas, get_events, update_canvas
-from sdl2 import SDL_KEYDOWN, SDL_QUIT, SDLK_0, SDLK_1, SDLK_9, SDLK_ESCAPE, SDLK_F1, SDLK_r, SDLK_z
+from sdl2 import SDL_KEYDOWN, SDLK_ESCAPE, SDLK_F1, SDLK_r, SDLK_z
 
 import fx
 import game_framework
@@ -20,7 +18,7 @@ CLEAR_FRAMES = 60
 SHAKE_FRAMES = 24
 MESSAGE_FRAMES = 150
 
-stage_path = 'stages/stage01.json'   # select_mode가 고른 스테이지
+stage_path = 'stages/stage01.json'   # 스테이지 선택 화면이 생기면 거기서 고른다
 
 shake_rnd = random.Random()          # 화면 흔들림 전용. 게임 진행과는 상관없다
 
@@ -139,21 +137,8 @@ def stage_clear():
     fx.spawn('clear', exit_hatch.left + Exit.W / 2, exit_hatch.bottom + 100)
 
 
-def switch_stage(number):
-    """숫자 키로 스테이지를 바꾼다. 스테이지 선택 화면을 만들기 전까지 쓴다"""
-    global stage_path
-    path = f'stages/stage{number:02d}.json'
-    if os.path.exists(path):
-        finish()
-        stage_path = path
-        init()
-
-
-def handle_events():
-    for event in get_events():
-        if event.type == SDL_QUIT:
-            game_framework.quit()
-            continue
+def handle_events(events):
+    for event in events:
         if event.type == SDL_KEYDOWN:
             if event.key == SDLK_F1:
                 game_world.show_bb = not game_world.show_bb
@@ -167,9 +152,6 @@ def handle_events():
                     continue
                 if state == 'play' and event.key == SDLK_z:
                     remove_last_ghost()
-                    continue
-                if SDLK_1 <= event.key <= SDLK_9:
-                    switch_stage(event.key - SDLK_0)
                     continue
         # 연출 중에도 넘겨서 누르고 있는 방향키를 잃어버리지 않게 한다
         player.handle_event(event)
@@ -236,12 +218,10 @@ def play_step():
 
 
 def draw():
-    clear_canvas()
     game_world.render()
     if flash_t:
         ui.box(0, 0, 1279, 719, ui.RED, int(110 * flash_t / 12))
     draw_hud()
-    update_canvas()
 
 
 def draw_hud():
@@ -253,7 +233,7 @@ def draw_hud():
     ui.text(f'{len(ghosts) + 1}회차', 640, 648, 15, ui.GREY, align='center')
     ui.text(f'유령 {len(ghosts)} / {stage.max_ghosts}', 1256, 694, 20, ui.CYAN, align='right')
     ui.text(f'권장 {stage.recommended}명', 1256, 670, 14, ui.GREY, align='right')
-    ui.text('← → 이동    Space 점프    R 되감기    Z 유령 삭제    Esc 처음부터    1~9 스테이지    F1 충돌 상자',
+    ui.text('← → 이동    Space 점프    R 되감기    Z 유령 삭제    Esc 처음부터    F1 충돌 상자',
             24, 16, 14, ui.GREY)
     if message_t:
         w = ui.text_width(message, 22)
