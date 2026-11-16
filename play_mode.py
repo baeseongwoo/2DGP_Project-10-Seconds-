@@ -2,6 +2,7 @@ import random
 
 from sdl2 import SDL_KEYDOWN, SDLK_ESCAPE, SDLK_F1, SDLK_r, SDLK_z
 
+import clear_mode
 import fx
 import game_framework
 import game_world
@@ -18,7 +19,8 @@ CLEAR_FRAMES = 60
 SHAKE_FRAMES = 24
 MESSAGE_FRAMES = 150
 
-stage_path = 'stages/stage01.json'   # 스테이지 선택 화면이 생기면 거기서 고른다
+stage_path = 'stages/stage01.json'   # select_mode가 고른 스테이지
+result = None                        # 클리어 화면에 넘길 결과
 
 shake_rnd = random.Random()          # 화면 흔들림 전용. 게임 진행과는 상관없다
 
@@ -137,6 +139,16 @@ def stage_clear():
     fx.spawn('clear', exit_hatch.left + Exit.W / 2, exit_hatch.bottom + 100)
 
 
+def make_result():
+    stars = 1
+    if collapses == 0:
+        stars = 2
+        if len(ghosts) <= stage.recommended:
+            stars = 3
+    return {'number': stage.number, 'name': stage.name, 'path': stage_path, 'stars': stars,
+            'ghosts': len(ghosts), 'recommended': stage.recommended, 'collapses': collapses}
+
+
 def handle_events(events):
     for event in events:
         if event.type == SDL_KEYDOWN:
@@ -158,7 +170,7 @@ def handle_events(events):
 
 
 def update():
-    global state_t, message_t, shake_t, flash_t
+    global state_t, message_t, shake_t, flash_t, result
     game_world.update()
     message_t = max(0, message_t - 1)
     flash_t = max(0, flash_t - 1)
@@ -177,8 +189,14 @@ def update():
         finish_rewind()
     elif state == 'collapse' and state_t >= COLLAPSE_FRAMES:
         start_round()
-    elif state == 'clear' and state_t >= CLEAR_FRAMES:
-        restart_stage()
+    elif state == 'clear' and state_t == CLEAR_FRAMES:
+        result = make_result()
+        game_framework.push_mode(clear_mode)
+
+
+def update_effects():
+    """클리어 화면이 위에 떠 있는 동안에도 이펙트는 끝까지 재생한다"""
+    game_world.update()
 
 
 def play_step():
