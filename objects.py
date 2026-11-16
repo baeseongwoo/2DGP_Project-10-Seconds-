@@ -64,7 +64,7 @@ class Pedal:
 
 
 class Door:
-    """발판을 밟는 동안 열린다"""
+    """green: 발판을 밟는 동안 열린다. red: 밟는 동안 닫힌다"""
     W, H = 48, 96
     LAST_FRAME = 4
 
@@ -76,7 +76,7 @@ class Door:
         self.reset()
 
     def reset(self):
-        self.frame = 0.0
+        self.frame = float(self.LAST_FRAME) if self.kind == 'red' else 0.0
 
     def is_closed(self):
         # 문짝이 반 넘게 올라가야 지나갈 수 있다
@@ -87,7 +87,10 @@ class Door:
 
     def step(self, clock):
         pressed = any(p.pressed for p in self.pedals)
-        want_open = pressed
+        if self.kind == 'green':
+            want_open = pressed
+        else:
+            want_open = not pressed
         if want_open:
             self.frame = min(self.LAST_FRAME, self.frame + 0.5)
         else:
