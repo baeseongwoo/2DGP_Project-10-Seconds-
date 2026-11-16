@@ -1,5 +1,7 @@
 from pico2d import clear_canvas, get_events, update_canvas
-from sdl2 import SDL_KEYDOWN, SDL_QUIT, SDLK_ESCAPE, SDLK_F1, SDLK_r, SDLK_z
+from sdl2 import SDL_KEYDOWN, SDL_QUIT, SDLK_0, SDLK_1, SDLK_9, SDLK_ESCAPE, SDLK_F1, SDLK_r, SDLK_z
+
+import os
 
 import game_framework
 import game_world
@@ -99,6 +101,16 @@ def rewind():
     start_round()
 
 
+def switch_stage(number):
+    """숫자 키로 스테이지를 바꾼다. 스테이지 선택 화면을 만들기 전까지 쓴다"""
+    global stage_path
+    path = f'stages/stage{number:02d}.json'
+    if os.path.exists(path):
+        finish()
+        stage_path = path
+        init()
+
+
 def handle_events():
     for event in get_events():
         if event.type == SDL_QUIT:
@@ -117,6 +129,9 @@ def handle_events():
                     continue
                 if event.key == SDLK_z:
                     remove_last_ghost()
+                    continue
+                if SDLK_1 <= event.key <= SDLK_9:
+                    switch_stage(event.key - SDLK_0)
                     continue
         player.handle_event(event)
 
@@ -179,7 +194,7 @@ def draw_hud():
     ui.text(f'{len(ghosts) + 1}회차', 640, 648, 15, ui.GREY, align='center')
     ui.text(f'유령 {len(ghosts)} / {stage.max_ghosts}', 1256, 694, 20, ui.CYAN, align='right')
     ui.text(f'권장 {stage.recommended}명', 1256, 670, 14, ui.GREY, align='right')
-    ui.text('← → 이동    Space 점프    R 되감기    Z 유령 삭제    Esc 처음부터    F1 충돌 상자',
+    ui.text('← → 이동    Space 점프    R 되감기    Z 유령 삭제    Esc 처음부터    1~9 스테이지    F1 충돌 상자',
             24, 16, 14, ui.GREY)
     if message_t:
         w = ui.text_width(message, 22)
