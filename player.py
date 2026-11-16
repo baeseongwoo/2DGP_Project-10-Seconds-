@@ -55,6 +55,7 @@ class Player:
         self.coyote = 0
         self.jump_buffer = 0
         self.frame = 0.0
+        self.record = []       # 프레임마다 (x, y, 그림 칸, 바라보는 쪽). 되감으면 유령이 된다
         if hasattr(self, 'machine'):
             self.machine.set_state('RUN' if self.dir else 'IDLE')
 
@@ -110,6 +111,9 @@ class Player:
         if self.state == 'RUN':
             self.frame = (self.frame + Player.RUN_FPS / 60) % 4
 
+    def save_frame(self):
+        self.record.append((self.x, self.y, self.sprite_frame(), self.face_dir))
+
     def rows_covered(self):
         st = self.stage
         return range(st.row(self.y + self.H - 0.01), st.row(self.y + 0.01) + 1)
@@ -161,13 +165,16 @@ class Player:
         return Player.IDLE
 
     def draw(self):
-        w, h = Player.SPRITE_W, Player.SPRITE_H
-        # 그림의 발바닥이 맨 아래에서 한 줄 위에 있어서 1px 내려 그린다
-        x, y = round(self.x), round(self.y) + h // 2 - 1
-        left = self.sprite_frame() * w
-        if self.face_dir == 1:
-            self.image.clip_draw(left, 0, w, h, x, y)
-        else:
-            self.image.clip_composite_draw(left, 0, w, h, 0, 'h', x, y, w, h)
+        draw_body(self.image, self.x, self.y, self.sprite_frame(), self.face_dir)
         if game_world.show_bb:
             draw_rectangle(*self.get_bb())
+
+
+def draw_body(image, x, y, frame, face_dir):
+    w, h = Player.SPRITE_W, Player.SPRITE_H
+    # 그림의 발바닥이 맨 아래에서 한 줄 위에 있어서 1px 내려 그린다
+    x, y = round(x) + game_world.ox, round(y) + h // 2 - 1 + game_world.oy
+    if face_dir == 1:
+        image.clip_draw(frame * w, 0, w, h, x, y)
+    else:
+        image.clip_composite_draw(frame * w, 0, w, h, 0, 'h', x, y, w, h)
