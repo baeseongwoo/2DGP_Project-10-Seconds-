@@ -1,6 +1,7 @@
 import json
 
-from pico2d import load_image
+import assets
+import game_world
 
 TILE = 32
 SCREEN_H = 720
@@ -12,13 +13,19 @@ START, EXIT = 'P', 'E'
 class Stage:
     """JSON 맵을 읽어 타일을 그리고 충돌 판정에 쓸 칸 정보를 준다.
 
-    맵은 위에서 아래로 쓴 문자열 줄이다. # 벽, - 아래에서 통과하는 발판, P 시작 위치, E 출구(왼쪽 아래 칸).
+    map은 위에서 아래로 쓴 문자열 줄이다. # 벽, - 아래에서 통과하는 발판, P 시작 위치, E 출구(왼쪽 아래 칸).
+    pedals, doors, movers는 칸 좌표 [i, j]로 적는다. i는 왼쪽부터, j는 위부터 센다.
     """
 
     def __init__(self, path):
         with open(path, encoding='utf-8') as f:
             data = json.load(f)
+        self.number = data.get('number', 0)
         self.name = data['name']
+        self.recommended, self.max_ghosts = data.get('ghosts', [1, 3])
+        self.pedals = data.get('pedals', [])
+        self.doors = data.get('doors', [])
+        self.movers = data.get('movers', [])
         self.rows = data['map']
         self.h = len(self.rows)
         self.w = len(self.rows[0])
@@ -29,8 +36,8 @@ class Stage:
         self.start = self.find(START)
         self.exit = self.find(EXIT)
 
-        self.background = load_image('resource/background.png')
-        self.tiles = load_image('resource/tiles.png')
+        self.background = assets.image('background.png')
+        self.tiles = assets.image('tiles.png')
         self.draw_list = self.make_draw_list()
 
     def find(self, ch):
@@ -89,8 +96,9 @@ class Stage:
         pass
 
     def draw(self):
-        self.background.draw(640, 360)
+        ox, oy = game_world.ox, game_world.oy
+        self.background.draw(640 + ox, 360 + oy)
         for c, rw, i, j in self.draw_list:
             # tiles.png는 4x4 칸이고, 그림 줄 rw는 위에서부터 센다
             self.tiles.clip_draw(c * TILE, (3 - rw) * TILE, TILE, TILE,
-                                 self.left(i) + TILE // 2, self.bottom(j) + TILE // 2)
+                                 self.left(i) + TILE // 2 + ox, self.bottom(j) + TILE // 2 + oy)

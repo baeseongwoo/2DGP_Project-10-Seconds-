@@ -1,7 +1,8 @@
-from pico2d import draw_rectangle, load_image
+from pico2d import draw_rectangle
 from sdl2 import SDL_KEYDOWN, SDL_KEYUP, SDLK_LEFT, SDLK_RIGHT, SDLK_SPACE
 from transitions import Machine
 
+import assets
 import game_world
 from stage import TILE
 
@@ -23,7 +24,7 @@ class Player:
 
     def __init__(self, stage):
         self.stage = stage
-        self.image = load_image('resource/player.png')
+        self.image = assets.image('player.png')
         self.pressed_keys = set()
         self.respawn()
 

@@ -1,7 +1,8 @@
-# 0: 배경과 타일, 1: 오브젝트, 2: 캐릭터
-world = [[], [], []]
+STAGE, OBJECT, GHOST, PLAYER, FX = range(5)
+world = [[] for _ in range(5)]
 
 show_bb = False   # F1로 충돌 상자를 보이게 한다
+ox = oy = 0       # 화면 흔들림. 그릴 때 모든 좌표에 더한다
 
 
 def collide(a, b):
@@ -28,7 +29,7 @@ def clear():
 
 def update():
     for layer in world:
-        for o in layer:
+        for o in layer[:]:   # 이펙트가 끝나면 스스로 빠지므로 복사본을 돈다
             o.update()
 
 

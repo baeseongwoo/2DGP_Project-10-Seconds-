@@ -1,5 +1,6 @@
-from pico2d import draw_rectangle, load_image
+from pico2d import draw_rectangle
 
+import assets
 import game_world
 
 
@@ -8,7 +9,7 @@ class Exit:
 
     def __init__(self, left, bottom):
         self.left, self.bottom = left, bottom
-        self.image = load_image('resource/exit.png')
+        self.image = assets.image('exit.png')
         self.lit = False
 
     def get_bb(self):
@@ -20,6 +21,6 @@ class Exit:
 
     def draw(self):
         self.image.clip_draw(self.W if self.lit else 0, 0, self.W, self.H,
-                             self.left + self.W // 2, self.bottom + self.H // 2)
+                             self.left + self.W // 2 + game_world.ox, self.bottom + self.H // 2 + game_world.oy)
         if game_world.show_bb:
             draw_rectangle(*self.get_bb())
