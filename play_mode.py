@@ -1,8 +1,10 @@
+import os
+import random
+
 from pico2d import clear_canvas, get_events, update_canvas
 from sdl2 import SDL_KEYDOWN, SDL_QUIT, SDLK_0, SDLK_1, SDLK_9, SDLK_ESCAPE, SDLK_F1, SDLK_r, SDLK_z
 
-import os
-
+import fx
 import game_framework
 import game_world
 import ui
@@ -12,14 +14,20 @@ from player import Player
 from stage import Stage
 
 ROUND_FRAMES = 600     # 한 회차 10초
-CLEAR_FRAMES = 60      # 출구에 닿고 1초 뒤 처음부터 다시 한다
+REWIND_FRAMES = 28     # 되감기 연출
+COLLAPSE_FRAMES = 50   # 시간 붕괴 연출 뒤 같은 회차를 0초부터
+CLEAR_FRAMES = 60
+SHAKE_FRAMES = 24
 MESSAGE_FRAMES = 150
 
-stage_path = 'stages/stage01.json'
+stage_path = 'stages/stage01.json'   # select_mode가 고른 스테이지
+
+shake_rnd = random.Random()          # 화면 흔들림 전용. 게임 진행과는 상관없다
 
 
 def init():
-    global stage, player, exit_hatch, pedals, doors, movers, ghosts, collapses, message, message_t
+    global stage, player, exit_hatch, pedals, doors, movers, ghosts, collapses
+    global message, message_t, shake_t, flash_t
     stage = Stage(stage_path)
     game_world.add_object(stage, game_world.STAGE)
 
@@ -45,11 +53,13 @@ def init():
     ghosts = []
     collapses = 0
     message, message_t = '', 0
+    shake_t = flash_t = 0
     start_round()
 
 
 def finish():
     game_world.clear()
+    game_world.ox = game_world.oy = 0
 
 
 def pause():
@@ -62,13 +72,14 @@ def resume():
 
 def start_round():
     """시계와 문, 발판을 처음 상태로 돌리고 모든 유령을 0초부터 다시 재생한다"""
-    global clock, cleared_t
+    global clock, state, state_t
     clock = 0
-    cleared_t = None
+    state, state_t = 'play', 0
     player.respawn()
     for o in pedals + doors + movers + ghosts:
         o.reset()
     exit_hatch.lit = False
+    fx.spawn('blink', player.x, player.y + 50)
 
 
 def show(text):
@@ -94,8 +105,13 @@ def remove_last_ghost():
     start_round()
 
 
-def rewind():
-    """이번 회차의 기록을 유령으로 남기고 새 회차를 시작한다. 가득 찼으면 기록을 버린다"""
+def begin_rewind():
+    global state, state_t
+    state, state_t = 'rewind', 0
+    fx.spawn('rewind', player.x, player.y + 33)
+
+
+def finish_rewind():
     if len(ghosts) < stage.max_ghosts:
         g = Ghost(player.record, len(ghosts) + 1)
         ghosts.append(g)
@@ -103,6 +119,24 @@ def rewind():
     else:
         show(f'유령이 가득 찼다 ({stage.max_ghosts}명). 이번 기록은 버리고 다시 한다')
     start_round()
+
+
+def time_collapse(ghost, door):
+    """유령이 지나야 할 문이 닫혀 과거와 현재가 어긋났다"""
+    global state, state_t, collapses, shake_t, flash_t
+    state, state_t = 'collapse', 0
+    collapses += 1
+    shake_t, flash_t = SHAKE_FRAMES, 12
+    l, b, r, t = door.get_bb()
+    fx.spawn('collapse', (l + r) / 2, ghost.y + ghost.H / 2)
+    show(f'시간 붕괴! {ghost.number}번 유령이 닫힌 문에 막혔다')
+
+
+def stage_clear():
+    global state, state_t
+    state, state_t = 'clear', 0
+    exit_hatch.lit = True
+    fx.spawn('clear', exit_hatch.left + Exit.W / 2, exit_hatch.bottom + 100)
 
 
 def switch_stage(number):
@@ -115,14 +149,6 @@ def switch_stage(number):
         init()
 
 
-def time_collapse(ghost):
-    """유령이 지나야 할 문이 닫혀 과거와 현재가 어긋났다. 이번 회차를 0초부터 다시 한다"""
-    global collapses
-    collapses += 1
-    show(f'시간 붕괴! {ghost.number}번 유령이 닫힌 문에 막혔다')
-    start_round()
-
-
 def handle_events():
     for event in get_events():
         if event.type == SDL_QUIT:
@@ -132,36 +158,50 @@ def handle_events():
             if event.key == SDLK_F1:
                 game_world.show_bb = not game_world.show_bb
                 continue
-            if cleared_t is None:
+            if state != 'clear':
                 if event.key == SDLK_ESCAPE:
                     restart_stage()
                     continue
-                if event.key == SDLK_r:
-                    rewind()
+                if state == 'play' and event.key == SDLK_r:
+                    begin_rewind()
                     continue
-                if event.key == SDLK_z:
+                if state == 'play' and event.key == SDLK_z:
                     remove_last_ghost()
                     continue
                 if SDLK_1 <= event.key <= SDLK_9:
                     switch_stage(event.key - SDLK_0)
                     continue
+        # 연출 중에도 넘겨서 누르고 있는 방향키를 잃어버리지 않게 한다
         player.handle_event(event)
 
 
 def update():
-    global cleared_t, message_t
+    global state_t, message_t, shake_t, flash_t
+    game_world.update()
     message_t = max(0, message_t - 1)
-    if cleared_t is not None:
-        cleared_t += 1
-        if cleared_t >= CLEAR_FRAMES:
-            restart_stage()
+    flash_t = max(0, flash_t - 1)
+    if shake_t > 0:
+        shake_t -= 1
+        amp = round(8 * shake_t / SHAKE_FRAMES)
+        game_world.ox, game_world.oy = shake_rnd.randint(-amp, amp), shake_rnd.randint(-amp, amp)
+    else:
+        game_world.ox = game_world.oy = 0
+
+    if state == 'play':
+        play_step()
         return
-    play_step()
+    state_t += 1
+    if state == 'rewind' and state_t >= REWIND_FRAMES:
+        finish_rewind()
+    elif state == 'collapse' and state_t >= COLLAPSE_FRAMES:
+        start_round()
+    elif state == 'clear' and state_t >= CLEAR_FRAMES:
+        restart_stage()
 
 
 def play_step():
     """한 프레임. 순서가 언제나 같아야 유령이 같은 결과를 낸다"""
-    global clock, cleared_t
+    global clock
     for m in movers:
         m.step(clock)
     for g in ghosts:
@@ -180,26 +220,26 @@ def play_step():
     for g in ghosts:
         for d in doors:
             if d.is_closed() and game_world.collide(g, d):
-                time_collapse(g)
+                time_collapse(g, d)
                 return
     if player.y + player.H < 0:
         show('떨어졌다. 이번 회차를 다시 한다')
         start_round()
         return
     if game_world.collide(player, exit_hatch):
-        exit_hatch.lit = True
-        cleared_t = 0
-        print(f'{stage.name} 클리어: 유령 {len(ghosts)}명')
+        stage_clear()
         return
 
     clock += 1
     if clock >= ROUND_FRAMES:
-        rewind()
+        begin_rewind()
 
 
 def draw():
     clear_canvas()
     game_world.render()
+    if flash_t:
+        ui.box(0, 0, 1279, 719, ui.RED, int(110 * flash_t / 12))
     draw_hud()
     update_canvas()
 

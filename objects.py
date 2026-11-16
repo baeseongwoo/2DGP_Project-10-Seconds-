@@ -5,6 +5,7 @@
 from pico2d import draw_rectangle
 
 import assets
+import fx
 import game_world
 import ui
 from stage import TILE
@@ -53,6 +54,8 @@ class Pedal:
         was = self.pressed
         self.pressed = any(game_world.collide(self, b) for b in bodies)
         self.just_pressed = self.pressed and not was
+        if self.just_pressed:
+            fx.spawn('spark_' + self.color, self.cx, self.bottom + 16)
 
     def update(self):
         pass
