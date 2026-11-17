@@ -80,7 +80,7 @@ def draw_wipe():
 
 
 def run(start_mode):
-    """update는 항상 1/60초 단위로 부른다. 유령 기록을 프레임 칸으로 저장하므로 속도가 달라지면 안 된다."""
+    """update는 항상 1/60초 단위로 부른다. 기록체 기록을 프레임 칸으로 저장하므로 속도가 달라지면 안 된다."""
     global running
     running = True
     stack.append(start_mode)
@@ -99,7 +99,8 @@ def run(start_mode):
         elif not busy():
             stack[-1].handle_events(events)
         while lag >= FRAME_TIME and running:
-            if wipe_t <= 0:
+            # 전환 중에는 멈춘다. 블라인드가 걷히기 전에 회차 시계가 흐르면 플레이어가 그만큼 손해를 본다
+            if wipe_t == 0:
                 stack[-1].update()
             step_wipe()
             lag -= FRAME_TIME
