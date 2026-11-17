@@ -71,7 +71,7 @@ def resume():
 
 
 def start_round():
-    """시계와 문, 발판을 처음 상태로 돌리고 모든 유령을 0초부터 다시 재생한다"""
+    """시계와 문, 발판을 처음 상태로 돌리고 모든 기록체를 0초부터 다시 재생한다"""
     global clock, state, state_t
     clock = 0
     state, state_t = 'play', 0
@@ -101,7 +101,7 @@ def remove_last_ghost():
     if not ghosts:
         return
     game_world.remove_object(ghosts.pop())
-    show(f'{len(ghosts) + 1}번 유령을 지웠다')
+    show(f'기록체 #{len(ghosts) + 1}을 지웠다')
     start_round()
 
 
@@ -117,19 +117,19 @@ def finish_rewind():
         ghosts.append(g)
         game_world.add_object(g, game_world.GHOST)
     else:
-        show(f'유령이 가득 찼다 ({stage.max_ghosts}명). 이번 기록은 버리고 다시 한다')
+        show(f'기록체가 가득 찼다 ({stage.max_ghosts}명). 이번 기록은 버리고 다시 한다')
     start_round()
 
 
 def time_collapse(ghost, door):
-    """유령이 지나야 할 문이 닫혀 과거와 현재가 어긋났다"""
+    """기록체가 지나야 할 문이 닫혀 과거와 현재가 어긋났다"""
     global state, state_t, collapses, shake_t, flash_t
     state, state_t = 'collapse', 0
     collapses += 1
     shake_t, flash_t = SHAKE_FRAMES, 12
     l, b, r, t = door.get_bb()
     fx.spawn('collapse', (l + r) / 2, ghost.y + ghost.H / 2)
-    show(f'시간 붕괴! {ghost.number}번 유령이 닫힌 문에 막혔다')
+    show(f'시간 붕괴! 기록체 #{ghost.number}이 닫힌 문에 막혔다')
 
 
 def stage_clear():
@@ -200,7 +200,7 @@ def update_effects():
 
 
 def play_step():
-    """한 프레임. 순서가 언제나 같아야 유령이 같은 결과를 낸다"""
+    """한 프레임. 순서가 언제나 같아야 기록체가 같은 결과를 낸다"""
     global clock
     for m in movers:
         m.step(clock)
@@ -249,9 +249,9 @@ def draw_hud():
     ui.box(540, 662, 740, 665, (40, 50, 64))
     ui.box(540, 662, 540 + 200 * remaining / 10, 665, ui.ORANGE if remaining <= 3 else ui.CYAN)
     ui.text(f'{len(ghosts) + 1}회차', 640, 648, 15, ui.GREY, align='center')
-    ui.text(f'유령 {len(ghosts)} / {stage.max_ghosts}', 1256, 694, 20, ui.CYAN, align='right')
+    ui.text(f'기록체 {len(ghosts)} / {stage.max_ghosts}', 1256, 694, 20, ui.CYAN, align='right')
     ui.text(f'권장 {stage.recommended}명', 1256, 670, 14, ui.GREY, align='right')
-    ui.text('← → 이동    Space 점프    R 되감기    Z 유령 삭제    Esc 처음부터    F1 충돌 상자',
+    ui.text('← → 이동    Space 점프    R 되감기    Z 기록체 삭제    Esc 처음부터    F1 충돌 상자',
             24, 16, 14, ui.GREY)
     if message_t:
         w = ui.text_width(message, 22)

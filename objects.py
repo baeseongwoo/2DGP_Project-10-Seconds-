@@ -1,6 +1,6 @@
 """스테이지 오브젝트. 시계로 움직이는 것들은 step(clock)으로 한 프레임씩 진행한다.
 
-같은 회차 시간에는 언제나 같은 상태가 되어야 유령 재생이 어긋나지 않는다.
+같은 회차 시간에는 언제나 같은 상태가 되어야 기록체 재생이 어긋나지 않는다.
 """
 from pico2d import draw_rectangle
 
@@ -34,7 +34,7 @@ class Exit:
 
 
 class Pedal:
-    """두 칸 너비 바닥에 놓인다. 플레이어든 유령이든 몸이 닿아 있으면 눌린다"""
+    """두 칸 너비 바닥에 놓인다. 나든 기록체든 몸이 닿아 있으면 눌리고, 누른 몸의 색으로 표시등이 켜진다"""
     W, H = 48, 16
 
     def __init__(self, color, left, bottom):
@@ -46,13 +46,16 @@ class Pedal:
     def reset(self):
         self.pressed = False
         self.just_pressed = False
+        self.by = None       # 누르고 있는 몸의 색
 
     def get_bb(self):
         return self.cx - 22, self.bottom, self.cx + 22, self.bottom + 10
 
     def step(self, bodies):
         was = self.pressed
-        self.pressed = any(game_world.collide(self, b) for b in bodies)
+        on = [b for b in bodies if game_world.collide(self, b)]
+        self.pressed = bool(on)
+        self.by = on[0].color if on else None
         self.just_pressed = self.pressed and not was
         if self.just_pressed:
             fx.spawn('spark_' + self.color, self.cx, self.bottom + 16)
@@ -61,8 +64,11 @@ class Pedal:
         pass
 
     def draw(self):
+        ox, oy = game_world.ox, game_world.oy
         self.image.clip_draw(self.W if self.pressed else 0, 0, self.W, self.H,
-                             self.cx + game_world.ox, self.bottom + self.H // 2 + game_world.oy)
+                             self.cx + ox, self.bottom + self.H // 2 + oy)
+        if self.by:
+            ui.box(self.cx - 14 + ox, self.bottom + 1 + oy, self.cx + 14 + ox, self.bottom + 3 + oy, self.by)
         if game_world.show_bb:
             draw_rectangle(*self.get_bb())
 
@@ -82,6 +88,7 @@ class Door:
 
     def reset(self):
         self.open_until = -1
+        self.by = None       # 이 문을 움직인 몸의 색 (문 위 표시등)
         self.frame = float(self.LAST_FRAME) if self.kind == 'red' else 0.0
 
     def is_closed(self):
@@ -93,6 +100,8 @@ class Door:
 
     def step(self, clock):
         pressed = any(p.pressed for p in self.pedals)
+        if self.kind != 'timer':
+            self.by = next((p.by for p in self.pedals if p.pressed), None)
         if self.kind == 'green':
             want_open = pressed
         elif self.kind == 'red':
@@ -101,6 +110,9 @@ class Door:
             # 계속 밟고 있어도 다시 열리지 않는다. 다시 밟아야 3초가 새로 시작된다
             if any(p.just_pressed for p in self.pedals):
                 self.open_until = clock + Door.OPEN_FRAMES
+                self.by = next(p.by for p in self.pedals if p.just_pressed)
+            if clock >= self.open_until:
+                self.by = None
             want_open = clock < self.open_until
         if want_open:
             self.frame = min(self.LAST_FRAME, self.frame + 0.5)
@@ -115,6 +127,10 @@ class Door:
         ox, oy = game_world.ox, game_world.oy
         self.image.clip_draw(int(self.frame) * self.W, 0, self.W, self.H,
                              self.cx + ox, self.bottom + self.H // 2 + oy)
+        if self.by:
+            # 문틀 위 표시등이 이 문을 움직인 몸의 색으로 켜진다
+            top = self.bottom + self.H + oy
+            ui.box(self.cx - 10 + ox, top - 6, self.cx + 9 + ox, top - 3, self.by)
         if self.kind == 'timer' and self.open_until > getattr(self, 'clock', 0):
             # 남은 시간 막대
             left = (self.open_until - self.clock) / Door.OPEN_FRAMES

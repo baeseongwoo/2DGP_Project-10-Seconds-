@@ -21,6 +21,7 @@ class Player:
     SPRITE_W, SPRITE_H = 48, 72
     RUN_FPS = 10
     IDLE, RUN_FIRST, RISE, FALL = 0, 1, 5, 6
+    color = (241, 244, 247)   # 발판, 문 표시등에 쓰는 지금의 나의 색
 
     def __init__(self, stage):
         self.stage = stage
@@ -52,11 +53,11 @@ class Player:
         self.dir = int(SDLK_RIGHT in self.pressed_keys) - int(SDLK_LEFT in self.pressed_keys)
         self.face_dir = self.dir or 1
         self.on_ground = True
-        self.carrier = None    # 올라타 있는 움직이는 발판이나 유령
+        self.carrier = None    # 올라타 있는 움직이는 발판이나 기록체
         self.coyote = 0
         self.jump_buffer = 0
         self.frame = 0.0
-        self.record = []       # 프레임마다 (x, y, 그림 칸, 바라보는 쪽). 되감으면 유령이 된다
+        self.record = []       # 프레임마다 (x, y, 그림 칸, 바라보는 쪽). 되감으면 기록체가 된다
         if hasattr(self, 'machine'):
             self.machine.set_state('RUN' if self.dir else 'IDLE')
 
@@ -92,7 +93,7 @@ class Player:
             self.stop_run()
 
     def step(self, blocks, floors):
-        """blocks: 막힌 상자(닫힌 문), floors: 위에서만 밟히는 것(움직이는 발판, 유령 머리)"""
+        """blocks: 막힌 상자(닫힌 문), floors: 위에서만 밟히는 것(움직이는 발판, 기록체 머리)"""
         if self.carrier is not None:
             dx, dy = self.carrier.delta()
             self.y += dy

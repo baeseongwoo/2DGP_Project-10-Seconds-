@@ -51,11 +51,11 @@ def draw():
     ring.clip_draw(((t // 4) % 6) * 128, 0, 128, 128, 640, 470, 384, 384)
     ui.text('10 Seconds', 640, 470, 96, ui.WHITE, align='center')
     ui.text('10초마다 시간이 되감긴다. 과거의 나와 함께 탈출하라.', 640, 380, 22, ui.CYAN, align='center')
-    # 나와 지난 회차의 나들
-    ghost = assets.image('ghost.png')
-    ghost.opacify(0.55)
+    # 나와 지난 회차의 나(기록체 #1, #2)
     for k, x in enumerate((520, 580)):
-        draw_body(ghost, x, 180, 1 + (t // 6 + k * 2) % 4, 1)
+        record = assets.image(f'record_{k + 1}.png')
+        record.opacify(0.8)
+        draw_body(record, x, 180, 1 + (t // 6 + k * 2) % 4, 1)
     draw_body(assets.image('player.png'), 660, 180, 1 + (t // 6) % 4, 1)
     ui.box(0, 150, 1279, 180, (28, 36, 49))
     ui.box(0, 178, 1279, 180, (93, 111, 136))

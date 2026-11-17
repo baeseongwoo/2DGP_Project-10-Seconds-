@@ -62,6 +62,6 @@ def draw():
         # 별이 하나씩 차례로 나타난다
         on = k < r['stars'] and t >= 12 + k * 10
         ui.text('★' if on else '☆', 560 + k * 80, 390, 56, ui.GOLD if on else ui.GREY, align='center')
-    ui.text(f'사용한 유령 {r["ghosts"]}명 (권장 {r["recommended"]}명)', 640, 320, 18, ui.CYAN, align='center')
+    ui.text(f'사용한 기록체 {r["ghosts"]}명 (권장 {r["recommended"]}명)', 640, 320, 18, ui.CYAN, align='center')
     ui.text(f'시간 붕괴 {r["collapses"]}회', 640, 292, 18, ui.RED if r['collapses'] else ui.GREY, align='center')
     ui.text('Space 다음 스테이지    R 다시 하기    Esc 스테이지 선택', 640, 236, 16, ui.GREY, align='center')
