@@ -74,15 +74,17 @@ class Pedal:
 
 
 class Door:
-    """green: 발판을 밟는 동안 열린다. red: 밟는 동안 닫힌다. timer: 밟는 순간부터 3초 열린다"""
+    """green: 발판을 밟는 동안 열린다. red: 밟는 동안 닫힌다. timer: 밟는 순간부터 3초 열린다.
+    need_all이면 연결된 발판을 모두 동시에 밟아야 밟은 것으로 본다 (둘이 함께 누르기)"""
     W, H = 48, 96
     OPEN_FRAMES = 180
     LAST_FRAME = 4
 
-    def __init__(self, kind, left, bottom, pedals):
+    def __init__(self, kind, left, bottom, pedals, need_all=False):
         self.kind = kind
         self.cx, self.bottom = left + TILE // 2, bottom
         self.pedals = pedals
+        self.need_all = need_all
         self.image = assets.image(f'door_{kind}.png')
         self.reset()
 
@@ -99,7 +101,7 @@ class Door:
         return self.cx - 16, self.bottom, self.cx + 16, self.bottom + self.H
 
     def step(self, clock):
-        pressed = any(p.pressed for p in self.pedals)
+        pressed = (all if self.need_all else any)(p.pressed for p in self.pedals)
         if self.kind != 'timer':
             self.by = next((p.by for p in self.pedals if p.pressed), None)
         if self.kind == 'green':

@@ -41,7 +41,8 @@ def init():
     doors = []
     for d in stage.doors:
         i, j = d['at']
-        doors.append(Door(d['kind'], stage.left(i), stage.bottom(j), [by_id[k] for k in d['pedals']]))
+        doors.append(Door(d['kind'], stage.left(i), stage.bottom(j), [by_id[k] for k in d['pedals']],
+                          d.get('all', False)))
     movers = [Mover(stage, m['path'], m['period'], m.get('hold', 60)) for m in stage.movers]
     i, j = stage.exit
     exit_hatch = Exit(stage.left(i), stage.bottom(j))
