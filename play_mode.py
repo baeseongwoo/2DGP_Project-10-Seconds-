@@ -8,6 +8,7 @@ import game_framework
 import game_world
 import timeline
 import ui
+import watch
 from ghost import Ghost
 from objects import Door, Exit, Mover, Pedal
 from player import Player
@@ -255,12 +256,9 @@ def draw():
 
 
 def draw_hud():
-    remaining = (ROUND_FRAMES - clock) / game_framework.FPS
     ui.text(f'{stage.number}. {stage.name}', 24, 694, 20)
-    ui.text(f'{remaining:.1f}', 640, 690, 40, ui.ORANGE if remaining <= 3 else ui.WHITE, align='center')
-    ui.box(540, 662, 740, 665, (40, 50, 64))
-    ui.box(540, 662, 540 + 200 * remaining / 10, 665, ui.ORANGE if remaining <= 3 else ui.CYAN)
-    ui.text(f'{len(ghosts) + 1}회차', 640, 648, 15, ui.GREY, align='center')
+    watch.draw(clock, state_t / REWIND_FRAMES if state == 'rewind' else 0.0)
+    ui.text(f'{len(ghosts) + 1}회차', 560, 684, 18, ui.GREY, align='right')
     ui.text(f'기록체 {len(ghosts)} / {stage.max_ghosts}', 1256, 694, 20, ui.CYAN, align='right')
     ui.text(f'권장 {stage.recommended}명', 1256, 670, 14, ui.GREY, align='right')
     ui.text('← → 이동    Space 점프    R 되감기    Z 기록체 삭제    Esc 처음부터    F2 타임라인',
