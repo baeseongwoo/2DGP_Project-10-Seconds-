@@ -24,6 +24,8 @@ class Ghost:
         self.color = ui.RECORD[(number - 1) % len(ui.RECORD)]
         self.image = assets.image(f'record_{(number - 1) % len(ui.RECORD) + 1}.png')
         self.ring = assets.image('record_ring.png', True)
+        self.door_history = []    # 녹화된 회차에서 프레임마다 문이 열려 있었는지 (붕괴 예고에 쓴다)
+        self.presses, self.passes = [], []   # 타임라인에 그릴 발판 구간과 문 지난 순간
         self.reset()
 
     def reset(self):

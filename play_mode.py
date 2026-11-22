@@ -1,11 +1,12 @@
 import random
 
-from sdl2 import SDL_KEYDOWN, SDLK_ESCAPE, SDLK_F1, SDLK_r, SDLK_z
+from sdl2 import SDL_KEYDOWN, SDLK_ESCAPE, SDLK_F1, SDLK_F2, SDLK_r, SDLK_z
 
 import clear_mode
 import fx
 import game_framework
 import game_world
+import timeline
 import ui
 from ghost import Ghost
 from objects import Door, Exit, Mover, Pedal
@@ -73,8 +74,10 @@ def resume():
 
 def start_round():
     """시계와 문, 발판을 처음 상태로 돌리고 모든 기록체를 0초부터 다시 재생한다"""
-    global clock, state, state_t
+    global clock, state, state_t, door_history, warns
     clock = 0
+    door_history = []      # 이번 회차에 문이 프레임마다 열려 있었는지
+    warns = []
     state, state_t = 'play', 0
     player.respawn()
     for o in pedals + doors + movers + ghosts:
@@ -115,6 +118,8 @@ def begin_rewind():
 def finish_rewind():
     if len(ghosts) < stage.max_ghosts:
         g = Ghost(player.record, len(ghosts) + 1)
+        g.door_history = door_history
+        g.presses, g.passes = timeline.analyze(player.record, Ghost.W, Ghost.H, pedals, doors, stays=True)
         ghosts.append(g)
         game_world.add_object(g, game_world.GHOST)
     else:
@@ -153,6 +158,9 @@ def make_result():
 def handle_events(events):
     for event in events:
         if event.type == SDL_KEYDOWN:
+            if event.key == SDLK_F2:
+                timeline.visible = not timeline.visible
+                continue
             if event.key == SDLK_F1:
                 game_world.show_bb = not game_world.show_bb
                 continue
@@ -202,7 +210,7 @@ def update_effects():
 
 def play_step():
     """한 프레임. 순서가 언제나 같아야 기록체가 같은 결과를 낸다"""
-    global clock
+    global clock, warns
     for m in movers:
         m.step(clock)
     for g in ghosts:
@@ -217,6 +225,8 @@ def play_step():
         if d.is_closed():
             player.push_out(*d.get_bb())
     player.save_frame()
+    door_history.append(tuple(not d.is_closed() for d in doors))
+    warns = timeline.warnings(ghosts, doors, clock)
 
     for g in ghosts:
         for d in doors:
@@ -238,6 +248,7 @@ def play_step():
 
 def draw():
     game_world.render()
+    timeline.draw_causal(pedals, doors, clock, warns)
     if flash_t:
         ui.box(0, 0, 1279, 719, ui.RED, int(110 * flash_t / 12))
     draw_hud()
@@ -252,8 +263,9 @@ def draw_hud():
     ui.text(f'{len(ghosts) + 1}회차', 640, 648, 15, ui.GREY, align='center')
     ui.text(f'기록체 {len(ghosts)} / {stage.max_ghosts}', 1256, 694, 20, ui.CYAN, align='right')
     ui.text(f'권장 {stage.recommended}명', 1256, 670, 14, ui.GREY, align='right')
-    ui.text('← → 이동    Space 점프    R 되감기    Z 기록체 삭제    Esc 처음부터    F1 충돌 상자',
+    ui.text('← → 이동    Space 점프    R 되감기    Z 기록체 삭제    Esc 처음부터    F2 타임라인',
             24, 16, 14, ui.GREY)
+    timeline.draw_panel(ghosts, timeline.analyze(player.record, Player.W, Player.H, pedals, doors), clock, warns)
     if message_t:
         w = ui.text_width(message, 22)
         ui.box(640 - w / 2 - 18, 586, 640 + w / 2 + 18, 622, ui.INK, 200)

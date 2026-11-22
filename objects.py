@@ -47,6 +47,7 @@ class Pedal:
         self.pressed = False
         self.just_pressed = False
         self.by = None       # 누르고 있는 몸의 색
+        self.presser = None  # 누르고 있는 몸 (인과선의 시작점)
 
     def get_bb(self):
         return self.cx - 22, self.bottom, self.cx + 22, self.bottom + 10
@@ -55,6 +56,7 @@ class Pedal:
         was = self.pressed
         on = [b for b in bodies if game_world.collide(self, b)]
         self.pressed = bool(on)
+        self.presser = on[0] if on else None
         self.by = on[0].color if on else None
         self.just_pressed = self.pressed and not was
         if self.just_pressed:
