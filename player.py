@@ -4,6 +4,7 @@ from transitions import Machine
 
 import assets
 import game_world
+import sound
 from stage import TILE
 
 
@@ -104,6 +105,7 @@ class Player:
             self.jump_buffer -= 1
             if self.coyote > 0:
                 self.vy = Player.JUMP_SPEED
+                sound.play('jump')
                 self.jump_buffer = self.coyote = 0
 
         self.vx = self.dir * Player.SPEED

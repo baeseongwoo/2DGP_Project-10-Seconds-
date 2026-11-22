@@ -1,11 +1,12 @@
 import random
 
-from sdl2 import SDL_KEYDOWN, SDLK_ESCAPE, SDLK_F1, SDLK_F2, SDLK_r, SDLK_z
+from sdl2 import SDL_KEYDOWN, SDLK_ESCAPE, SDLK_F1, SDLK_F2, SDLK_m, SDLK_r, SDLK_z
 
 import clear_mode
 import fx
 import game_framework
 import game_world
+import sound
 import timeline
 import ui
 import watch
@@ -61,6 +62,7 @@ def init():
 
 
 def finish():
+    sound.stop_music()
     game_world.clear()
     game_world.ox = game_world.oy = 0
 
@@ -85,6 +87,7 @@ def start_round():
         o.reset()
     exit_hatch.lit = False
     fx.spawn('blink', player.x, player.y + 50)
+    sound.play_music()   # 음악도 정확히 10초라 회차와 함께 처음부터
 
 
 def show(text):
@@ -114,6 +117,8 @@ def begin_rewind():
     global state, state_t
     state, state_t = 'rewind', 0
     fx.spawn('rewind', player.x, player.y + 33)
+    sound.stop_music()
+    sound.play('rewind')
 
 
 def finish_rewind():
@@ -136,6 +141,8 @@ def time_collapse(ghost, door):
     shake_t, flash_t = SHAKE_FRAMES, 12
     l, b, r, t = door.get_bb()
     fx.spawn('collapse', (l + r) / 2, ghost.y + ghost.H / 2)
+    sound.stop_music()
+    sound.play('collapse')
     show(f'시간 붕괴! 기록체 #{ghost.number}이 닫힌 문에 막혔다')
 
 
@@ -144,6 +151,8 @@ def stage_clear():
     state, state_t = 'clear', 0
     exit_hatch.lit = True
     fx.spawn('clear', exit_hatch.left + Exit.W / 2, exit_hatch.bottom + 100)
+    sound.stop_music()
+    sound.play('clear')
 
 
 def make_result():
@@ -159,6 +168,9 @@ def make_result():
 def handle_events(events):
     for event in events:
         if event.type == SDL_KEYDOWN:
+            if event.key == SDLK_m:
+                sound.toggle_mute()
+                continue
             if event.key == SDLK_F2:
                 timeline.visible = not timeline.visible
                 continue
@@ -261,7 +273,7 @@ def draw_hud():
     ui.text(f'{len(ghosts) + 1}회차', 560, 684, 18, ui.GREY, align='right')
     ui.text(f'기록체 {len(ghosts)} / {stage.max_ghosts}', 1256, 694, 20, ui.CYAN, align='right')
     ui.text(f'권장 {stage.recommended}명', 1256, 670, 14, ui.GREY, align='right')
-    ui.text('← → 이동    Space 점프    R 되감기    Z 기록체 삭제    Esc 처음부터    F2 타임라인',
+    ui.text('← → 이동    Space 점프    R 되감기    Z 기록체 삭제    Esc 처음부터    F2 타임라인    M 소리',
             24, 16, 14, ui.GREY)
     timeline.draw_panel(ghosts, timeline.analyze(player.record, Player.W, Player.H, pedals, doors), clock, warns)
     if message_t:

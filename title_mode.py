@@ -4,6 +4,7 @@ import assets
 import game_framework
 import game_world
 import select_mode
+import sound
 import ui
 from player import draw_body
 
@@ -14,6 +15,7 @@ def init():
     global t
     t = 0
     game_world.ox = game_world.oy = 0
+    sound.play_music(loop=True)
 
 
 def finish():

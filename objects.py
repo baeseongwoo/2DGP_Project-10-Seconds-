@@ -7,6 +7,7 @@ from pico2d import draw_rectangle
 import assets
 import fx
 import game_world
+import sound
 import ui
 from stage import TILE
 
@@ -61,6 +62,7 @@ class Pedal:
         self.just_pressed = self.pressed and not was
         if self.just_pressed:
             fx.spawn('spark_' + self.color, self.cx, self.bottom + 16)
+            sound.play('pedal')
 
     def update(self):
         pass
@@ -118,10 +120,13 @@ class Door:
             if clock >= self.open_until:
                 self.by = None
             want_open = clock < self.open_until
+        was_closed = self.is_closed()
         if want_open:
             self.frame = min(self.LAST_FRAME, self.frame + 0.5)
         else:
             self.frame = max(0.0, self.frame - 1.0)
+        if was_closed != self.is_closed():
+            sound.play('door')
         self.clock = clock
 
     def update(self):
